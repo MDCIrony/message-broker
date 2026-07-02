@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  broker-server:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: broker-server
+    ports:
+      - "8000:8000"
+    volumes:
+      - broker-data:/app/data
+    restart: unless-stopped
+
+  frontend-dashboard:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend-dashboard
+    ports:
+      - "80:80"
+    depends_on:
+      - broker-server
+    restart: unless-stopped
+
+volumes:
+  broker-data:
+    driver: local
