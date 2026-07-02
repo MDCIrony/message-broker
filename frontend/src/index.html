@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Message Broker Dashboard - MVP</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="main-header">
+            <div class="logo-area">
+                <div class="logo-icon">⇄</div>
+                <h1>Broker de Mensajes <span>MVP</span></h1>
+            </div>
+            <div class="auth-bar">
+                <label for="token-selector">Credencial Token:</label>
+                <select id="token-selector" class="token-select">
+                    <option value="admin-token-999" selected>Admin (admin-token-999) [Todo]</option>
+                    <option value="producer-token-abc">Productor (producer-token-abc) [Solo Envíos]</option>
+                    <option value="consumer-token-xyz">Consumidor (consumer-token-xyz) [Solo noticias/alertas]</option>
+                    <option value="invalid-token-123">Inválido (invalid-token-123) [Rechazar]</option>
+                </select>
+            </div>
+            <div class="status-badge" id="broker-status">
+                <span class="status-dot"></span>
+                <span class="status-text">Conectando...</span>
+            </div>
+        </header>
+
+
+        <!-- Main Dashboard Grid -->
+        <main class="dashboard-grid">
+            
+            <!-- SECTION 1: BROKER SERVER LOGS -->
+            <section class="card broker-logs-card">
+                <div class="card-header">
+                    <h2>Servidor Broker</h2>
+                    <span class="badge">Consola en Vivo</span>
+                </div>
+                <p class="card-desc">Eventos internos registrados por el broker en tiempo real.</p>
+                <div class="logs-container" id="broker-events-log">
+                    <!-- Dynamic logs here -->
+                    <div class="empty-state">Esperando eventos del servidor...</div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: PRODUCER -->
+            <section class="card producer-card">
+                <div class="card-header">
+                    <h2>Cliente Productor</h2>
+                    <span class="badge producer-badge">Enviar</span>
+                </div>
+                <p class="card-desc">Publica mensajes a cualquier tópico. Se crean dinámicamente.</p>
+                
+                <form id="producer-form" class="control-form" onsubmit="return false;">
+                    <div class="form-group">
+                        <label for="producer-topic">Tópico</label>
+                        <input type="text" id="producer-topic" placeholder="ej. notificaciones, alertas" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="producer-payload">Mensaje (Payload)</label>
+                        <textarea id="producer-payload" rows="3" placeholder="Escribe el contenido del mensaje..." required></textarea>
+                    </div>
+                    <button type="submit" id="btn-publish" class="btn btn-primary">
+                        <span>Publicar Mensaje</span>
+                        <span class="btn-icon">➔</span>
+                    </button>
+                </form>
+
+                <div class="sub-log-title">Historial de Envíos</div>
+                <div class="logs-container mini-log" id="producer-history-log">
+                    <div class="empty-state">No has enviado mensajes en esta sesión.</div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: CONSUMER -->
+            <section class="card consumer-card">
+                <div class="card-header">
+                    <h2>Cliente Consumidor</h2>
+                    <span class="badge consumer-badge">Recibir</span>
+                </div>
+                <p class="card-desc">Suscríbete a tópicos para recibir notificaciones concurrentes.</p>
+
+                <form id="subscription-form" class="control-form" onsubmit="return false;">
+                    <div class="form-row">
+                        <div class="form-group flex-grow">
+                            <label for="consumer-topic">Tópico a Suscribirse</label>
+                            <input type="text" id="consumer-topic" placeholder="ej. notificaciones" required autocomplete="off">
+                        </div>
+                        <button type="submit" id="btn-subscribe" class="btn btn-success">
+                            Suscribir
+                        </button>
+                    </div>
+                </form>
+
+                <div class="active-subscriptions">
+                    <label>Suscripciones Activas:</label>
+                    <div class="subs-chips-container" id="subscriptions-list">
+                        <span class="empty-state-text">Ninguna suscripción activa</span>
+                    </div>
+                </div>
+
+                <div class="sub-log-title">Mensajes Recibidos</div>
+                <div class="logs-container mini-log" id="consumer-received-log">
+                    <div class="empty-state">Esperando mensajes entrantes...</div>
+                </div>
+            </section>
+
+        </main>
+        
+        <!-- Footer -->
+        <footer class="main-footer">
+            <p>Arquitectura de Sistemas Distribuidos &copy; 2026 - Universidad MVP Message Broker</p>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+</body>
+</html>
