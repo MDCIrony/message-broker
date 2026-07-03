@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Header, status
 from typing import List
 from app.models import MessageCreate, MessageResponse
 from app.services.message_service import MessageService
-from app.dependencies import get_message_service
+from app.services.broker_service import BrokerService
+from app.dependencies import get_message_service, get_broker_service
 from app.services.security import security_validator
 
 router = APIRouter(prefix="/api")
@@ -57,6 +58,14 @@ async def list_messages(
     service: MessageService = Depends(get_message_service),
 ):
     """Retrieves message history. Verifies subscribe ACL permissions for the topic."""
+    # Ensure the token has subscribe permissions in general
+    acl_rules = security_validator._acl.get(token)
+    if not acl_rules or "subscribe" not in acl_rules.get("allowed_actions", []):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Token is not authorized to read messages",
+        )
+
     if topic:
         if not security_validator.authorize(token, "subscribe", topic):
             raise HTTPException(
@@ -64,7 +73,51 @@ async def list_messages(
                 detail=f"Token is not authorized to read topic '{topic}'",
             )
         return await service.get_messages_by_topic(topic, limit)
-    return await service.get_all_messages(limit)
+    
+    # Check if the token is authorized to subscribe/read each message's topic
+    all_messages = await service.get_all_messages(limit)
+    return [
+        msg for msg in all_messages
+        if security_validator.authorize(token, "subscribe", msg["topic"])
+    ]
+
+
+
+
+@router.get("/admin/status")
+async def get_admin_status(
+    token: str = Depends(get_token),
+    broker: BrokerService = Depends(get_broker_service),
+    service: MessageService = Depends(get_message_service),
+):
+    """Returns detailed real-time broker status. Admin token required."""
+    if token != "admin-token-999":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Admin credentials required for status"
+        )
+    
+    clients_info = []
+    for client_id, meta in broker.active_clients.items():
+        subscribed_topics = list(broker.client_topics.get(client_id, []))
+        is_log_sub = client_id in broker.log_subscribers
+        clients_info.append({
+            "client_id": client_id,
+            "role": meta["role"],
+            "ip": meta["ip"],
+            "connected_at": meta["connected_at"],
+            "subscriptions": subscribed_topics,
+            "is_log_subscriber": is_log_sub
+        })
+        
+    unique_topics = await service.get_topics()
+    
+    return {
+        "active_clients_count": len(broker.active_clients),
+        "active_clients": clients_info,
+        "topics": unique_topics,
+        "subscriptions_raw": {topic: list(subs.keys()) for topic, subs in broker.subscriptions.items()}
+    }
 
 
 @router.get("/health")
