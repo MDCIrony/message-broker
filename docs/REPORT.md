@@ -25,38 +25,95 @@ El servidor del broker actúa como un intermediario o concentrador de comunicaci
 
 ## 2. Flujo de Mensajes y Secuencia de Procesamiento
 
-El ciclo de vida de un mensaje consta de las siguientes fases secuenciales desde su envío hasta su recepción por los consumidores suscritos:
+El sistema gestiona el ciclo de vida de los mensajes y de las conexiones mediante los siguientes flujos estructurados en diagramas de secuencia Mermaid:
 
+### A. Diagrama de Secuencia de Publicación y Distribución (REST a WebSocket)
+Este diagrama ilustra la secuencia desde que un productor publica un mensaje por HTTP hasta que el broker lo persiste en SQLite y lo distribuye concurrentemente en tiempo real a los consumidores WebSockets suscritos:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Productor
+    participant API as Router HTTP (/api/publish)
+    participant Sec as ACLSecurityValidator
+    participant DB as SQLite DB
+    participant Broker as BrokerService (Singleton)
+    participant WS as Router WebSockets (/ws)
+    actor Consumidor
+    participant Logger as CentralizedLogger
+
+    Productor->>API: POST /publish (message, token)
+    activate API
+    API->>Sec: authorize(token, "publish", topic)
+    activate Sec
+    Sec-->>API: boolean (Autorizado)
+    deactivate Sec
+    
+    alt No Autorizado
+        API-->>Productor: 403 Forbidden
+    else Autorizado
+        API->>DB: INSERT INTO messages (topic, payload)
+        API->>Broker: broadcast_to_topic(topic, message)
+        activate Broker
+        Broker->>WS: Obtiene conexiones activas del tópico
+        WS->>Consumidor: ws.send_text(payload) (Push)
+        Broker->>Logger: log_event("MESSAGE_DISTRIBUTED")
+        deactivate Broker
+        API-->>Productor: 201 Created (MessageResponse)
+    end
+    deactivate API
 ```
-[Cliente/Productor] (REST/WS)
-     │
-     ▼ (1. Envía mensaje + Token Credencial)
-[FastAPI Router / Handshake WS]
-     │
-     ├─► (2. Valida Autenticación y ACL en security.py)
-     │   │
-     │   └───► [Denegado] ──► Retorna 403 Forbidden / Cierra Socket
-     │
-     ▼ [Aprobado] (3. Invoca MessageService.publish)
-[MessageService]
-     ├───► [MessageRepository] ──► (4. SQL INSERT) ──► [SQLite DB]
-     │
-     ▼ (5. Invoca BrokerService.broadcast_to_topic)
-[BrokerService]
-     ├───► Obtiene subscriptores activos autorizados del tópico
-     ├───► (6. Despacha mensajes concurrentemente con asyncio.gather)
-     │     └───► [Consumidor Suscrito] ──► Recibe payload en vivo
-     │
-     ▼ (7. Reporta resultado al CentralizedLogger)
-[CentralizedLogger]
-     ├───► ConsoleLogStrategy ──► Imprime log en consola
-     └───► WebSocketLogStrategy ──► Distribuye log al Dashboard de Monitoreo
+
+### B. Diagrama de Secuencia de Conexión y Suscripción WebSocket
+Este diagrama ilustra el flujo de control de acceso durante el handshake inicial de un WebSocket y el procesamiento dinámico de solicitudes de suscripción sobre la conexión persistente:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Consumidor
+    participant WS as Router WebSockets (/ws/{client_id})
+    participant Sec as ACLSecurityValidator
+    participant Broker as BrokerService (Singleton)
+    participant Logger as CentralizedLogger
+
+    Consumidor->>WS: Conexión WebSocket (?token)
+    activate WS
+    WS->>Sec: authenticate(token)
+    activate Sec
+    Sec-->>WS: boolean (Autenticado)
+    deactivate Sec
+    
+    alt Token Inválido
+        WS-->>Consumidor: send_json({"error"}) & close(4003)
+    else Token Válido
+        WS->>Broker: connect_client(client_id, websocket)
+        Broker->>Logger: log_event("CLIENT_CONNECTED")
+        WS-->>Consumidor: Conexión Aceptada (Establecida)
+        
+        Note over Consumidor, WS: Suscripción a un Tópico
+        Consumidor->>WS: Trama JSON {"action": "subscribe", "topic": "noticias"}
+        WS->>Sec: authorize(token, "subscribe", "noticias")
+        activate Sec
+        Sec-->>WS: boolean (Autorizado)
+        deactivate Sec
+        
+        alt No Autorizado
+            WS-->>Consumidor: send_json({"error": "Forbidden"})
+        else Autorizado
+            WS->>Broker: subscribe(client_id, "noticias", websocket)
+            Broker->>Logger: log_event("CLIENT_SUBSCRIBED")
+            WS-->>Consumidor: send_json({"event": "subscribed", "topic": "noticias"})
+        end
+    end
+    deactivate WS
 ```
 
-### Detalle de las Etapas:
+---
 
-1. **Publicación**: El productor envía un mensaje (por HTTP POST o WebSocket). Debe incluir su cabecera `X-Broker-Token` o query parameter `token`.
-2. **Autenticación y ACL**: El broker consulta a `ACLSecurityValidator`. Si el token no es válido o no tiene permiso de escritura (`publish`) en dicho tópico, se aborta la petición con `403 Forbidden`.
-3. **Persistencia**: Si se autoriza, el `MessageService` delega en `MessageRepository` para registrar de forma no bloqueante el mensaje en la tabla SQLite.
-4. **Despacho / Broadcast**: Se invoca a `BrokerService.broadcast_to_topic()`. El broker recupera los sockets activos y realiza envíos concurrentes seguros.
-5. **Auditoría / Logueo**: El broker reporta el éxito o fallo al `CentralizedLogger`, que propaga la bitácora hacia la consola del servidor y la UI del Dashboard.
+## 3. Detalle de las Etapas del Ciclo de Vida
+
+1. **Publicación y Validación de Entrada:** El productor realiza un envío (REST POST o trama WebSocket). El middleware de seguridad valida el token en base a la ACL. Si falla, el flujo se corta inmediatamente con un código HTTP `403` o cierre de socket `4003`.
+2. **Persistencia Transaccional:** Si la acción es aprobada, el mensaje se registra de manera asíncrona en SQLite. Esto garantiza que existirá un historial auditable accesible por REST (`GET /api/messages`).
+3. **Distribución en Tiempo Real (Fan-Out):** `BrokerService` extrae la lista de WebSockets de los consumidores suscritos en memoria y realiza un despacho concurrente (`asyncio.gather`). Si un socket se detecta roto o inactivo durante el envío, se desencadena su desconexión automática y remoción de memoria.
+4. **Logueo Desacoplado:** Al concluir la distribución, se propaga el evento al `CentralizedLogger` para que las estrategias activas (consola local y WebSocket de auditoría para la UI) actualicen sus paneles correspondientes.
+
