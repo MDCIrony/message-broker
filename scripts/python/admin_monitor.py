@@ -25,6 +25,7 @@ broker_status = {}
 recent_logs = []
 MAX_LOG_LINES = 10
 
+
 def fetch_status(host, port, token):
     """Realiza una petición HTTP GET sincrónica al endpoint de administración."""
     url = f"http://{host}:{port}/api/admin/status"
@@ -40,37 +41,38 @@ def fetch_status(host, port, token):
     except Exception as e:
         return {"error": f"No se pudo conectar al Broker: {e}"}
 
+
 def draw_dashboard(host, port):
     """Limpia la terminal y redibuja la consola de administración en texto ASCII."""
     # Código ANSI para limpiar la pantalla y mover el cursor arriba
     sys.stdout.write("\033[H\033[2J")
     sys.stdout.flush()
-    
+
     print("=" * 80)
     print(f"        MONITOR ADMINISTRATIVO DEL MESSAGE BROKER (TIEMPO SEMI-REAL)")
     print("=" * 80)
     print(f" Servidor Broker: {host}:{port} | Hora Local: {datetime.now().strftime('%T')}")
     print("-" * 80)
-    
+
     if "error" in broker_status:
         print(f"\033[91m[ERROR]\033[0m {broker_status['error']}")
         print("=" * 80)
         return
-        
+
     # Estadísticas generales
     active_count = broker_status.get("active_clients_count", 0)
     topics = broker_status.get("topics", [])
     topics_str = ", ".join(topics) if topics else "(ninguno)"
-    
+
     print(f"ESTADÍSTICAS DEL SISTEMA:")
     print(f"  - Clientes WebSockets Conectados: \033[92m{active_count}\033[0m")
     print(f"  - Tópicos Activos (con historial): {topics_str}")
     print("-" * 80)
-    
+
     # Listado de clientes
     print(f"{'ID CLIENTE':<30} {'ROL':<10} {'DIRECCIÓN IP':<20} {'SUSCRIPCIONES'}")
     print("-" * 80)
-    
+
     active_clients = broker_status.get("active_clients", [])
     if not active_clients:
         print("  (No hay clientes WebSockets activos conectados)")
@@ -81,12 +83,12 @@ def draw_dashboard(host, port):
             ip = client.get("ip", "desconocido")
             subs = client.get("subscriptions", [])
             is_log = client.get("is_log_subscriber", False)
-            
+
             # Formatear la lista de suscripciones
             subs_str = ", ".join(subs) if subs else "(ninguna)"
             if is_log:
                 subs_str = "\033[96m(Logs de Servidor)\033[0m"
-                
+
             # Colorear según el rol
             role_color = "\033[0m"
             if role == "admin":
@@ -95,11 +97,11 @@ def draw_dashboard(host, port):
                 role_color = "\033[93m" # Amarillo
             elif role == "consumer":
                 role_color = "\033[92m" # Verde
-                
+
             print(f"{client_id:<30} {role_color}{role:<10}\033[0m {ip:<20} {subs_str}")
-            
+
     print("-" * 80)
-    
+
     # Bitácora de logs en vivo
     print(f"BITÁCORA DE LOGS EN TIEMPO REAL (Últimos {MAX_LOG_LINES} eventos):")
     print("-" * 80)
@@ -111,7 +113,7 @@ def draw_dashboard(host, port):
             msg_str = f"Client: {log.get('client_id')} " \
                       f"{'| Topic: ' + log.get('topic') if log.get('topic') else ''} " \
                       f"{'| Msg: ' + log.get('message') if log.get('message') else ''}"
-            
+
             # Colorear tipo de log
             event_type = log.get("event_type", "EVENT")
             event_color = "\033[94m" # Azul por defecto
@@ -121,11 +123,12 @@ def draw_dashboard(host, port):
                 event_color = "\033[92m" # Verde
             elif "RECEIVED" in event_type:
                 event_color = "\033[93m" # Amarillo
-                
+
             print(f"  [{time_str}] {event_color}[{event_type:<20}]\033[0m {msg_str}")
-            
+
     print("=" * 80)
     print(" Presiona Ctrl+C para salir.")
+
 
 async def status_polling_loop(host, port, token):
     """Tarea para consultar periódicamente el estado HTTP."""
@@ -137,21 +140,22 @@ async def status_polling_loop(host, port, token):
         draw_dashboard(host, port)
         await asyncio.sleep(2)
 
+
 async def ws_logs_loop(host, port, token):
     """Tarea para escuchar logs del servidor vía WebSocket."""
     global recent_logs
     clientId = f"admin_monitor_{datetime.now().strftime('%M%S')}"
     uri = f"ws://{host}:{port}/ws/{clientId}?token={token}"
-    
+
     while True:
         try:
             async with websockets.connect(uri) as websocket:
                 # Solicitar recibir los logs del broker
                 await websocket.send(json.dumps({"action": "register_logs"}))
-                
+
                 async for message in websocket:
                     data = json.loads(message)
-                    
+
                     # Si es un log del servidor (tiene event_type), lo encolamos
                     if "event_type" in data:
                         recent_logs.append(data)
@@ -162,11 +166,12 @@ async def ws_logs_loop(host, port, token):
             # Reintentar conexión si se cae
             await asyncio.sleep(3)
 
+
 async def main():
     host = sys.argv[1] if len(sys.argv) > 1 else "localhost"
     port = sys.argv[2] if len(sys.argv) > 2 else "8000"
     token = sys.argv[3] if len(sys.argv) > 3 else "admin-token-999"
-    
+
     # Iniciar las tareas concurrentemente
     await asyncio.gather(
         status_polling_loop(host, port, token),

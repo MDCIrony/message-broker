@@ -19,6 +19,7 @@ except ImportError:
         print("Por favor instala 'websockets' manualmente con: pip install websockets")
         sys.exit(1)
 
+
 async def receive_messages(websocket):
     """Tarea para recibir y mostrar mensajes del broker continuamente."""
     try:
@@ -41,6 +42,7 @@ async def receive_messages(websocket):
     except Exception as e:
         print(f"\n[ERROR] Error leyendo del WebSocket: {e}\n> ", end="", flush=True)
 
+
 async def interactive_console(websocket):
     """Tarea para leer comandos de stdin y enviarlos al WebSocket."""
     loop = asyncio.get_running_loop()
@@ -52,21 +54,21 @@ async def interactive_console(websocket):
     print("  unsub <topic> -> Cancelar suscripción a un tópico")
     print("  exit          -> Salir del programa")
     print("--------------------------------------------------")
-    
+
     while True:
         # Imprimir prompt
         sys.stdout.write("> ")
         sys.stdout.flush()
-        
+
         # Leer línea asíncronamente
         line = await loop.run_in_executor(None, sys.stdin.readline)
         if not line:
             break
-        
+
         parts = line.strip().split(maxsplit=1)
         if not parts:
             continue
-            
+
         cmd = parts[0].lower()
         if cmd == "exit":
             print("Cerrando conexión...")
@@ -88,19 +90,20 @@ async def interactive_console(websocket):
         else:
             print(f"Comando desconocido: '{cmd}'. Usa 'sub <topic>', 'unsub <topic>' o 'exit'")
 
+
 async def main():
     # Parámetros: puerto, nombre_consumidor, token
     port = sys.argv[1] if len(sys.argv) > 1 else "8000"
     client_name = sys.argv[2] if len(sys.argv) > 2 else "consumidor_cli"
     token = sys.argv[3] if len(sys.argv) > 3 else "consumer-token-xyz"
-    
+
     # Generar identificador con UUID para cumplir la regla 3
     client_uuid = str(uuid.uuid4())[:8]
     full_client_id = f"{client_name}_{client_uuid}"
-    
+
     uri = f"ws://localhost:{port}/ws/{full_client_id}?token={token}"
     print(f"Conectándose a: {uri} ...")
-    
+
     try:
         async with websockets.connect(uri) as websocket:
             print(f"Conectado exitosamente como: {full_client_id}\n")
