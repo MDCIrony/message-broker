@@ -25,7 +25,7 @@ flowchart TB
         Dashboard["Admin Dashboard (HTML/CSS/JS)"]
     end
 
-    subgraph Backend[Servidor Broker (FastAPI)]
+    subgraph Backend ["Servidor Broker - FastAPI"]
         HTTP["Router HTTP REST (/api)"]
         WS["Router WebSockets (/ws)"]
         
