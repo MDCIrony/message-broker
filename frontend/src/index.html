@@ -59,23 +59,51 @@
                     <h2>Conexiones WebSockets Activas</h2>
                     <span class="badge">Tiempo Real</span>
                 </div>
-                <p class="card-desc">Monitoreo de sockets conectados, direcciones IP, roles y tópicos suscritos.</p>
-                <div class="table-container">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th>Cliente ID</th>
-                                <th>Rol</th>
-                                <th>Dirección IP</th>
-                                <th>Suscripciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="active-clients-tbody">
-                            <tr>
-                                <td colspan="4" class="table-empty">Cargando conexiones...</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <p class="card-desc">Monitoreo segmentado de clientes productores, consumidores y administradores en vivo.</p>
+                
+                <div class="clients-split-container">
+                    <!-- Column 1: Producers -->
+                    <div class="client-column">
+                        <div class="column-header">Productores Activos <span class="badge badge-primary" id="count-producers">0</span></div>
+                        <div class="table-container">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID Productor</th>
+                                        <th>IP Origen</th>
+                                        <th>Conectado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="active-producers-tbody">
+                                    <tr>
+                                        <td colspan="3" class="table-empty">Ninguno conectado</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Column 2: Consumers -->
+                    <div class="client-column">
+                        <div class="column-header">Consumidores Activos <span class="badge badge-success" id="count-consumers">0</span></div>
+                        <div class="table-container">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID Consumidor</th>
+                                        <th>IP Origen</th>
+                                        <th>Suscripciones</th>
+                                        <th>Conectado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="active-consumers-tbody">
+                                    <tr>
+                                        <td colspan="4" class="table-empty">Ninguno conectado</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -103,6 +131,13 @@
                         <span class="btn-icon">➔</span>
                     </button>
                 </form>
+
+                <div class="active-topics-section">
+                    <div class="sub-log-title">Tópicos Registrados en el Sistema</div>
+                    <div class="topics-chips-container" id="admin-topics-list">
+                        <span class="empty-state-text">Cargando tópicos...</span>
+                    </div>
+                </div>
             </section>
 
             <!-- Bottom Left: Live Messages Feed -->
