@@ -39,28 +39,28 @@ flowchart TB
     end
 
     %% Flujos de los Clientes CLI
-    ProdCLI -->|1a. POST /publish (X-Broker-Token)| HTTP
-    ConsCLI <-->|1b. WebSocket (?token) / sub| WS
+    ProdCLI -->|"1a. POST /publish (X-Broker-Token)"| HTTP
+    ConsCLI <-->|"1b. WebSocket (?token) / sub"| WS
 
     %% Flujos del Dashboard de Administración
-    Dashboard <-->|2a. WebSocket (?token) / register_logs| WS
-    Dashboard -->|2b. GET /admin/status (Polling)| HTTP
-    Dashboard -->|2c. POST /publish (Simulación)| HTTP
+    Dashboard <-->|"2a. WebSocket (?token) / register_logs"| WS
+    Dashboard -->|"2b. GET /admin/status (Polling)"| HTTP
+    Dashboard -->|"2c. POST /publish (Simulación)"| HTTP
 
     %% Flujos Internos del Servidor
-    HTTP -->|3. Valida Token & ACL| Security
-    WS -->|3. Valida Token & ACL| Security
+    HTTP -->|"3. Valida Token & ACL"| Security
+    WS -->|"3. Valida Token & ACL"| Security
     
-    HTTP -->|4. Persiste Mensaje| MsgRepo
-    MsgRepo -->|5. SQL Insert| DB
+    HTTP -->|"4. Persiste Mensaje"| MsgRepo
+    MsgRepo -->|"5. SQL Insert"| DB
     
-    HTTP -->|6. Trigger Broadcast| BrokerSvc
-    BrokerSvc -->|7. Push WebSocket (Fan-Out)| WS
-    WS -->|8. Entrega en Vivo| ConsCLI
+    HTTP -->|"6. Trigger Broadcast"| BrokerSvc
+    BrokerSvc -->|"7. Push WebSocket (Fan-Out)"| WS
+    WS -->|"8. Entrega en Vivo"| ConsCLI
 
     %% Flujo de Logs
-    BrokerSvc -->|9. Push Logs en tiempo real| WS
-    WS -->|10. Stream de Logs| Dashboard
+    BrokerSvc -->|"9. Push Logs en tiempo real"| WS
+    WS -->|"10. Stream de Logs"| Dashboard
 ```
 
 ---
