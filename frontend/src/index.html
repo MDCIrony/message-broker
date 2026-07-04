@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Message Broker Dashboard - MVP</title>
+    <title>Message Broker - Panel de Administración</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,108 +15,124 @@
         <!-- Header -->
         <header class="main-header">
             <div class="logo-area">
-                <div class="logo-icon">⇄</div>
-                <h1>Broker de Mensajes <span>MVP</span></h1>
+                <div class="logo-icon">⚙</div>
+                <h1>Broker de Mensajes <span>Panel de Control</span></h1>
             </div>
-            <div class="auth-bar">
-                <label for="token-selector">Credencial Token:</label>
-                <select id="token-selector" class="token-select">
-                    <option value="admin-token-999" selected>Admin (admin-token-999) [Todo]</option>
-                    <option value="producer-token-abc">Productor (producer-token-abc) [Solo Envíos]</option>
-                    <option value="consumer-token-xyz">Consumidor (consumer-token-xyz) [Solo noticias/alertas]</option>
-                    <option value="invalid-token-123">Inválido (invalid-token-123) [Rechazar]</option>
-                </select>
-            </div>
-            <div class="status-badge" id="broker-status">
-                <span class="status-dot"></span>
-                <span class="status-text">Conectando...</span>
+            <div class="header-right">
+                <div class="status-badge" id="broker-status">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Conectando...</span>
+                </div>
             </div>
         </header>
 
+        <!-- Stats Overview Cards -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-info">
+                    <span class="stat-label">Clientes Activos</span>
+                    <h3 id="stat-active-clients">0</h3>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🏷️</div>
+                <div class="stat-info">
+                    <span class="stat-label">Tópicos Activos</span>
+                    <h3 id="stat-active-topics">0</h3>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">✉️</div>
+                <div class="stat-info">
+                    <span class="stat-label">Mensajes Históricos</span>
+                    <h3 id="stat-total-messages">0</h3>
+                </div>
+            </div>
+        </section>
 
         <!-- Main Dashboard Grid -->
         <main class="dashboard-grid">
-            
-            <!-- SECTION 1: BROKER SERVER LOGS -->
-            <section class="card broker-logs-card">
+            <!-- Left Side: Table of Active Clients -->
+            <section class="card clients-card">
                 <div class="card-header">
-                    <h2>Servidor Broker</h2>
-                    <span class="badge">Consola en Vivo</span>
+                    <h2>Conexiones WebSockets Activas</h2>
+                    <span class="badge">Tiempo Real</span>
                 </div>
-                <p class="card-desc">Eventos internos registrados por el broker en tiempo real.</p>
-                <div class="logs-container" id="broker-events-log">
-                    <!-- Dynamic logs here -->
-                    <div class="empty-state">Esperando eventos del servidor...</div>
+                <p class="card-desc">Monitoreo de sockets conectados, direcciones IP, roles y tópicos suscritos.</p>
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Cliente ID</th>
+                                <th>Rol</th>
+                                <th>Dirección IP</th>
+                                <th>Suscripciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="active-clients-tbody">
+                            <tr>
+                                <td colspan="4" class="table-empty">Cargando conexiones...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </section>
 
-            <!-- SECTION 2: PRODUCER -->
-            <section class="card producer-card">
+            <!-- Right Side: Tools & Topics -->
+            <section class="card tools-card">
                 <div class="card-header">
-                    <h2>Cliente Productor</h2>
-                    <span class="badge producer-badge">Enviar</span>
+                    <h2>Consola de Pruebas (Productor)</h2>
+                    <span class="badge badge-admin">Simular</span>
                 </div>
-                <p class="card-desc">Publica mensajes a cualquier tópico. Se crean dinámicamente.</p>
+                <p class="card-desc">Publica mensajes de depuración a cualquier tópico del broker.</p>
                 
-                <form id="producer-form" class="control-form" onsubmit="return false;">
-                    <div class="form-group">
-                        <label for="producer-topic">Tópico</label>
-                        <input type="text" id="producer-topic" placeholder="ej. notificaciones, alertas" required autocomplete="off">
+                <form id="admin-publisher-form" class="control-form" onsubmit="return false;">
+                    <div class="form-row">
+                        <div class="form-group flex-grow">
+                            <label for="admin-topic">Tópico</label>
+                            <input type="text" id="admin-topic" placeholder="ej. noticias, alertas" required autocomplete="off">
+                        </div>
                     </div>
                     <div class="form-group">
-                        <label for="producer-payload">Mensaje (Payload)</label>
-                        <textarea id="producer-payload" rows="3" placeholder="Escribe el contenido del mensaje..." required></textarea>
+                        <label for="admin-payload">Mensaje (Payload)</label>
+                        <textarea id="admin-payload" rows="3" placeholder="Mensaje de prueba..." required></textarea>
                     </div>
                     <button type="submit" id="btn-publish" class="btn btn-primary">
-                        <span>Publicar Mensaje</span>
+                        <span>Publicar como Admin</span>
                         <span class="btn-icon">➔</span>
                     </button>
                 </form>
-
-                <div class="sub-log-title">Historial de Envíos</div>
-                <div class="logs-container mini-log" id="producer-history-log">
-                    <div class="empty-state">No has enviado mensajes en esta sesión.</div>
-                </div>
             </section>
 
-            <!-- SECTION 3: CONSUMER -->
-            <section class="card consumer-card">
+            <!-- Bottom Left: Live Messages Feed -->
+            <section class="card messages-feed-card">
                 <div class="card-header">
-                    <h2>Cliente Consumidor</h2>
-                    <span class="badge consumer-badge">Recibir</span>
+                    <h2>Flujo de Mensajes Recientes</h2>
+                    <span class="badge badge-success">Mensajes</span>
                 </div>
-                <p class="card-desc">Suscríbete a tópicos para recibir notificaciones concurrentes.</p>
-
-                <form id="subscription-form" class="control-form" onsubmit="return false;">
-                    <div class="form-row">
-                        <div class="form-group flex-grow">
-                            <label for="consumer-topic">Tópico a Suscribirse</label>
-                            <input type="text" id="consumer-topic" placeholder="ej. notificaciones" required autocomplete="off">
-                        </div>
-                        <button type="submit" id="btn-subscribe" class="btn btn-success">
-                            Suscribir
-                        </button>
-                    </div>
-                </form>
-
-                <div class="active-subscriptions">
-                    <label>Suscripciones Activas:</label>
-                    <div class="subs-chips-container" id="subscriptions-list">
-                        <span class="empty-state-text">Ninguna suscripción activa</span>
-                    </div>
-                </div>
-
-                <div class="sub-log-title">Mensajes Recibidos</div>
-                <div class="logs-container mini-log" id="consumer-received-log">
-                    <div class="empty-state">Esperando mensajes entrantes...</div>
+                <p class="card-desc">Últimos mensajes publicados y persistidos en el broker.</p>
+                <div class="logs-container" id="messages-received-feed">
+                    <div class="empty-state">No se han recibido mensajes en esta sesión.</div>
                 </div>
             </section>
 
+            <!-- Bottom Right: Live Server Logs -->
+            <section class="card broker-logs-card">
+                <div class="card-header">
+                    <h2>Bitácora del Servidor (Logs)</h2>
+                    <span class="badge badge-primary">Consola</span>
+                </div>
+                <p class="card-desc">Eventos de infraestructura y red reportados en vivo.</p>
+                <div class="logs-container" id="broker-events-log">
+                    <div class="empty-state">Esperando logs del servidor...</div>
+                </div>
+            </section>
         </main>
         
         <!-- Footer -->
         <footer class="main-footer">
-            <p>Arquitectura de Sistemas Distribuidos &copy; 2026 - Universidad MVP Message Broker</p>
+            <p>Sistemas Distribuidos &copy; 2026 - Consola de Control de Message Broker</p>
         </footer>
     </div>
 
