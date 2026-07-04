@@ -9,7 +9,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - broker-data:/app/data
+      - ./data:/app/data
     restart: unless-stopped
 
   frontend-dashboard:
@@ -22,7 +22,3 @@ services:
     depends_on:
       - broker-server
     restart: unless-stopped
-
-volumes:
-  broker-data:
-    driver: local
